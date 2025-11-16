@@ -732,6 +732,10 @@
         }, {
             passive: true
         });
+        // 在棋盤上滑動時，阻止頁面捲動
+        boardEl.addEventListener('touchmove', (e) => {
+            e.preventDefault();  // 阻止預設捲動  
+        }, { passive: false });
 
         boardEl.addEventListener('touchend', (e) => {
             if (autoPlay) return;
@@ -780,3 +784,4 @@
 
 
 </html>
+
