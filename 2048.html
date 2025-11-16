@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>2048 動畫版</title>
+    <style>
+         :root {
+            --board-size: 330px;
+            --cell-size: 70px;
+            --gap: 10px;
+        }
+        
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #faf8ef;
+            display: flex;
+            justify-content: center;
+            padding: 40px 10px;
+            margin: 0;
+            color: #776e65;
+        }
+        
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        
+        .logo-box {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .logo-title {
+            font-size: 42px;
+            font-weight: 700;
+            color: #776e65;
+        }
+        
+        .logo-subtitle {
+            font-size: 13px;
+            color: #8f7a66;
+        }
+        
+        .top-right {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            align-items: flex-end;
+        }
+        
+        .score-row {
+            display: flex;
+            gap: 6px;
+        }
+        
+        .score-box {
+            background: #bbada0;
+            padding: 6px 14px;
+            border-radius: 4px;
+            text-align: center;
+            color: #f9f6f2;
+            min-width: 70px;
+        }
+        
+        .score-label {
+            font-size: 11px;
+        }
+        
+        .score-value {
+            font-size: 20px;
+            font-weight: 700;
+        }
+        
+        .button-row {
+            display: flex;
+            gap: 6px;
+        }
+        
+        button {
+            border: none;
+            border-radius: 4px;
+            padding: 6px 10px;
+            font-size: 13px;
+            cursor: pointer;
+            color: #f9f6f2;
+            background: #8f7a66;
+            transition: filter 0.15s ease, transform 0.05s ease;
+        }
+        
+        button:hover {
+            filter: brightness(1.05);
+        }
+        
+        button:active {
+            transform: scale(0.97);
+        }
+        
+        #autoBtn.auto-on {
+            background: #edc22e;
+            color: #f9f6f2;
+        }
+        
+        #board {
+            position: relative;
+            width: var(--board-size);
+            height: var(--board-size);
+            background: #bbada0;
+            border-radius: 10px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+            overflow: hidden;
+        }
+        
+        #grid-layer {
+            position: absolute;
+            inset: 10px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            gap: var(--gap);
+        }
+        
+        .cell {
+            width: var(--cell-size);
+            height: var(--cell-size);
+            background: #cdc1b4;
+            border-radius: 6px;
+        }
+        
+        #tiles-layer {
+            position: absolute;
+            inset: 10px;
+            pointer-events: none;
+        }
+        
+        .tile {
+            position: absolute;
+            width: var(--cell-size);
+            height: var(--cell-size);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            font-weight: 700;
+            color: #776e65;
+            transition: transform 0.15s ease-in-out, background 0.15s ease-in-out, color 0.15s ease-in-out;
+        }
+        /* 顏色 */
+        
+        .n2 {
+            background: #eee4da;
+        }
+        
+        .n4 {
+            background: #ede0c8;
+        }
+        
+        .n8 {
+            background: #f2b179;
+            color: #f9f6f2;
+        }
+        
+        .n16 {
+            background: #f59563;
+            color: #f9f6f2;
+        }
+        
+        .n32 {
+            background: #f67c5f;
+            color: #f9f6f2;
+        }
+        
+        .n64 {
+            background: #f65e3b;
+            color: #f9f6f2;
+        }
+        
+        .n128 {
+            background: #edcf72;
+            color: #f9f6f2;
+        }
+        
+        .n256 {
+            background: #edcc61;
+            color: #f9f6f2;
+        }
+        
+        .n512 {
+            background: #edc850;
+            color: #f9f6f2;
+        }
+        
+        .n1024 {
+            background: #edc53f;
+            color: #f9f6f2;
+        }
+        
+        .n2048 {
+            background: #edc22e;
+            color: #f9f6f2;
+        }
+        /* 新方塊淡入 */
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+        
+        .spawn {
+            animation: fadeIn 0.18s ease-out;
+        }
+        
+        #message {
+            min-height: 22px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .hint {
+            font-size: 12px;
+            color: #8f7a66;
+        }
+        /* 手機上整個縮小一點 */
+        
+        @media (max-width: 480px) {
+            .game-container {
+                transform: scale(0.9);
+                transform-origin: top center;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="game-container">
+        <div class="top-bar">
+            <div class="logo-box">
+                <div class="logo-title">2048</div>
+                <div class="logo-subtitle">滑動方塊，合併到 2048！</div>
+            </div>
+            <div class="top-right">
+                <div class="score-row">
+                    <div class="score-box">
+                        <div class="score-label">SCORE</div>
+                        <div class="score-value" id="score">0</div>
+                    </div>
+                    <div class="score-box">
+                        <div class="score-label">BEST</div>
+                        <div class="score-value" id="bestScore">0</div>
+                    </div>
+                </div>
+                <div class="button-row">
+                    <button id="restartBtn">New Game</button>
+                    <button id="undoBtn">Undo</button>
+                    <button id="autoBtn">Auto：OFF</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="board">
+            <div id="grid-layer"></div>
+            <div id="tiles-layer"></div>
+        </div>
+
+        <div id="message"></div>
+        <div class="hint">
+            電腦：方向鍵 ← ↑ → ↓　｜　手機：用手指在棋盤上滑動<br> Auto 會用簡單策略幫你自動玩到不能動為止，Undo 可回到上一手。
+        </div>
+    </div>
+
+    <script>
+        const SIZE = 4;
+        const CELL_SIZE = 70;
+        const GAP = 10;
+        const ANIM_DURATION = 150; // ms
+        const MAX_UNDO = 100;
+
+        let grid; // grid[r][c] = tile object 或 null
+        let score = 0;
+        let bestScore = 0;
+        let hasWon = false;
+        let gameOver = false;
+        let isAnimating = false;
+
+        let autoPlay = false;
+        let autoTimer = null;
+
+        let undoStack = []; // 存歷史狀態：{gridValues, score, hasWon, gameOver}
+
+        const gridLayer = document.getElementById('grid-layer');
+        const tilesLayer = document.getElementById('tiles-layer');
+        const scoreEl = document.getElementById('score');
+        const bestScoreEl = document.getElementById('bestScore');
+        const messageEl = document.getElementById('message');
+        const restartBtn = document.getElementById('restartBtn');
+        const undoBtn = document.getElementById('undoBtn');
+        const autoBtn = document.getElementById('autoBtn');
+        const boardEl = document.getElementById('board');
+
+        // 建立背景格子
+        for (let i = 0; i < SIZE * SIZE; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            gridLayer.appendChild(cell);
+        }
+
+        function initState() {
+            grid = Array.from({
+                length: SIZE
+            }, () => Array(SIZE).fill(null));
+            score = 0;
+            hasWon = false;
+            gameOver = false;
+            isAnimating = false;
+            undoStack = [];
+            tilesLayer.innerHTML = '';
+            messageEl.textContent = '';
+            updateScoreDisplays();
+
+            addRandomTile(true);
+            addRandomTile(true);
+        }
+
+        // 讀取 / 更新最高分
+        function loadBestScore() {
+            const stored = localStorage.getItem('bestScore2048');
+            if (stored) {
+                bestScore = parseInt(stored, 10) || 0;
+            } else {
+                bestScore = 0;
+            }
+            bestScoreEl.textContent = bestScore;
+        }
+
+        function updateScoreDisplays() {
+            scoreEl.textContent = score;
+            if (score > bestScore) {
+                bestScore = score;
+                bestScoreEl.textContent = bestScore;
+                localStorage.setItem('bestScore2048', bestScore);
+            }
+        }
+
+        function getTilePixelPosition(r, c) {
+            return {
+                x: c * (CELL_SIZE + GAP),
+                y: r * (CELL_SIZE + GAP)
+            };
+        }
+
+        function setTilePosition(tile, r, c) {
+            tile.row = r;
+            tile.col = c;
+            const pos = getTilePixelPosition(r, c);
+            tile.el.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
+        }
+
+        function updateTileAppearance(tile) {
+            tile.el.className = 'tile';
+            tile.el.classList.add(`n${tile.value}`);
+        }
+
+        // opts.spawn === false 時不加 spawn 動畫（給 undo 用）
+        function createTile(r, c, value, opts = {}) {
+            const el = document.createElement('div');
+            el.className = `tile n${value}`;
+            if (opts.spawn !== false) {
+                el.classList.add('spawn');
+            }
+            el.textContent = value;
+            const tile = {
+                row: r,
+                col: c,
+                value,
+                el
+            };
+            tilesLayer.appendChild(el);
+            setTilePosition(tile, r, c);
+            grid[r][c] = tile;
+            return tile;
+        }
+
+        function removeTileObject(tile) {
+            if (!tile) return;
+            if (tile.el && tile.el.parentNode) {
+                tile.el.parentNode.removeChild(tile.el);
+            }
+            if (grid[tile.row] && grid[tile.row][tile.col] === tile) {
+                grid[tile.row][tile.col] = null;
+            }
+        }
+
+        function addRandomTile(initial = false) {
+            const empty = [];
+            for (let r = 0; r < SIZE; r++) {
+                for (let c = 0; c < SIZE; c++) {
+                    if (!grid[r][c]) empty.push({
+                        r,
+                        c
+                    });
+                }
+            }
+            if (empty.length === 0) return;
+
+            const {
+                r,
+                c
+            } = empty[Math.floor(Math.random() * empty.length)];
+            const value = Math.random() < 0.9 ? 2 : 4;
+            createTile(r, c, value, {
+                spawn: !initial
+            });
+        }
+
+        // 拍一張「狀態快照」存到 undo 用
+        function snapshotState() {
+            const values = grid.map(row =>
+                row.map(tile => (tile ? tile.value : 0))
+            );
+            return {
+                gridValues: values,
+                score,
+                hasWon,
+                gameOver
+            };
+        }
+
+        // 從數值格子還原狀態（重建所有 tile DOM）
+        function restoreState(state) {
+            score = state.score;
+            hasWon = state.hasWon;
+            gameOver = state.gameOver;
+            grid = Array.from({
+                length: SIZE
+            }, () => Array(SIZE).fill(null));
+            tilesLayer.innerHTML = '';
+
+            for (let r = 0; r < SIZE; r++) {
+                for (let c = 0; c < SIZE; c++) {
+                    const v = state.gridValues[r][c];
+                    if (v > 0) {
+                        createTile(r, c, v, {
+                            spawn: false
+                        });
+                    }
+                }
+            }
+
+            updateScoreDisplays();
+            messageEl.textContent = '';
+            if (gameOver) {
+                messageEl.textContent = '💀 遊戲結束！沒有可以移動的方塊了。';
+            } else if (hasWon) {
+                messageEl.textContent = '🎉 恭喜達成 2048！你可以繼續挑戰更高分～';
+            }
+        }
+
+        // 處理一條線（左/右/上/下 的某一 row 或 col）
+        function slideLine(cells) {
+            const tilesInLine = [];
+            for (const pos of cells) {
+                const tile = grid[pos.r][pos.c];
+                if (tile) tilesInLine.push(tile);
+            }
+
+            // 清掉這條線的 grid
+            for (const pos of cells) {
+                grid[pos.r][pos.c] = null;
+            }
+
+            if (tilesInLine.length === 0) return false;
+
+            let targetIndex = 0;
+            let moved = false;
+
+            for (let i = 0; i < tilesInLine.length; i++) {
+                let tile = tilesInLine[i];
+
+                // 試著跟下一個合併
+                if (i + 1 < tilesInLine.length && tilesInLine[i + 1].value === tile.value) {
+                    const nextTile = tilesInLine[i + 1];
+                    const dest = cells[targetIndex];
+
+                    if (tile.row !== dest.r || tile.col !== dest.c) moved = true;
+
+                    setTilePosition(tile, dest.r, dest.c);
+
+                    // 合併：移除 nextTile，提升 tile 的值
+                    removeTileObject(nextTile);
+                    tile.value *= 2;
+                    tile.el.textContent = tile.value;
+                    updateTileAppearance(tile);
+
+                    score += tile.value;
+
+                    grid[dest.r][dest.c] = tile;
+                    targetIndex++;
+                    i++; // 跳過 nextTile
+                    moved = true;
+                } else {
+                    const dest = cells[targetIndex];
+                    if (tile.row !== dest.r || tile.col !== dest.c) moved = true;
+
+                    setTilePosition(tile, dest.r, dest.c);
+                    grid[dest.r][dest.c] = tile;
+                    targetIndex++;
+                }
+            }
+
+            return moved;
+        }
+
+        function move(direction) {
+            if (isAnimating || gameOver) return false;
+
+            // 清掉舊的動畫 class
+            for (let r = 0; r < SIZE; r++) {
+                for (let c = 0; c < SIZE; c++) {
+                    const tile = grid[r][c];
+                    if (tile) {
+                        tile.el.classList.remove('spawn');
+                    }
+                }
+            }
+
+            // 先拍一張快照（只有真正有移動才會存入 undoStack）
+            const prevState = snapshotState();
+
+            let moved = false;
+
+            if (direction === 'left' || direction === 'right') {
+                for (let r = 0; r < SIZE; r++) {
+                    const cells = [];
+                    if (direction === 'left') {
+                        for (let c = 0; c < SIZE; c++) cells.push({
+                            r,
+                            c
+                        });
+                    } else {
+                        for (let c = SIZE - 1; c >= 0; c--) cells.push({
+                            r,
+                            c
+                        });
+                    }
+                    if (slideLine(cells)) moved = true;
+                }
+            } else {
+                for (let c = 0; c < SIZE; c++) {
+                    const cells = [];
+                    if (direction === 'up') {
+                        for (let r = 0; r < SIZE; r++) cells.push({
+                            r,
+                            c
+                        });
+                    } else {
+                        for (let r = SIZE - 1; r >= 0; r--) cells.push({
+                            r,
+                            c
+                        });
+                    }
+                    if (slideLine(cells)) moved = true;
+                }
+            }
+
+            if (moved) {
+                // 有動才把前一狀態存進 undoStack
+                undoStack.push(prevState);
+                if (undoStack.length > MAX_UNDO) {
+                    undoStack.shift();
+                }
+
+                isAnimating = true;
+                updateScoreDisplays();
+
+                setTimeout(() => {
+                    addRandomTile();
+                    updateScoreDisplays();
+                    checkGameState();
+                    isAnimating = false;
+                }, ANIM_DURATION + 40);
+            }
+
+            return moved;
+        }
+
+        function has2048() {
+            for (let r = 0; r < SIZE; r++) {
+                for (let c = 0; c < SIZE; c++) {
+                    const tile = grid[r][c];
+                    if (tile && tile.value >= 2048) return true;
+                }
+            }
+            return false;
+        }
+
+        function canMove() {
+            // 還有空格
+            for (let r = 0; r < SIZE; r++) {
+                for (let c = 0; c < SIZE; c++) {
+                    if (!grid[r][c]) return true;
+                }
+            }
+
+            // 檢查相鄰是否可合併
+            for (let r = 0; r < SIZE; r++) {
+                for (let c = 0; c < SIZE; c++) {
+                    const tile = grid[r][c];
+                    if (!tile) continue;
+                    const v = tile.value;
+                    if (r + 1 < SIZE && grid[r + 1][c] && grid[r + 1][c].value === v) return true;
+                    if (c + 1 < SIZE && grid[r][c + 1] && grid[r][c + 1].value === v) return true;
+                }
+            }
+            return false;
+        }
+
+        function checkGameState() {
+            if (!hasWon && has2048()) {
+                hasWon = true;
+                messageEl.textContent = '🎉 恭喜達成 2048！你可以繼續挑戰更高分～';
+            }
+
+            if (!canMove()) {
+                gameOver = true;
+                messageEl.textContent = '💀 遊戲結束！沒有可以移動的方塊了。';
+                if (autoPlay) setAutoPlay(false);
+            }
+        }
+
+        // 簡單 AI：依序嘗試 ↑ ← → ↓，只要有動就算
+        function stepAI() {
+            const dirs = ['up', 'left', 'right', 'down'];
+            for (const dir of dirs) {
+                const moved = move(dir);
+                if (moved) return true;
+            }
+            return false;
+        }
+
+        function setAutoPlay(on) {
+            if (on === autoPlay) return;
+            autoPlay = on;
+            if (autoPlay) {
+                autoBtn.classList.add('auto-on');
+                autoBtn.textContent = 'Auto：ON';
+                autoTimer = setInterval(() => {
+                    if (isAnimating || gameOver) return;
+                    const moved = stepAI();
+                    if (!moved) {
+                        setAutoPlay(false);
+                    }
+                }, ANIM_DURATION + 70);
+            } else {
+                autoBtn.classList.remove('auto-on');
+                autoBtn.textContent = 'Auto：OFF';
+                if (autoTimer) {
+                    clearInterval(autoTimer);
+                    autoTimer = null;
+                }
+            }
+        }
+
+        // Undo 功能
+        function undo() {
+            if (isAnimating) return;
+            if (!undoStack.length) return;
+            // Auto 開著的話先關掉，避免狀態亂跳
+            if (autoPlay) setAutoPlay(false);
+            const prev = undoStack.pop();
+            restoreState(prev);
+        }
+
+        // 🔑 鍵盤操作：長按只觸發一次
+        const activeKeys = new Set();
+
+        document.addEventListener('keydown', (e) => {
+            if (autoPlay) return; // Auto 時不接受手動
+
+            // 已經按住的鍵就不要再觸發，避免長按連發
+            if (activeKeys.has(e.key)) return;
+            activeKeys.add(e.key);
+
+            switch (e.key) {
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    move('left');
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    move('right');
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    move('up');
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    move('down');
+                    break;
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            // 鍵放開就從 activeKeys 中移除，允許下一次觸發
+            activeKeys.delete(e.key);
+        });
+
+
+        // 手機滑動操作
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        boardEl.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 0) {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+            }
+        }, {
+            passive: true
+        });
+
+        boardEl.addEventListener('touchend', (e) => {
+            if (autoPlay) return;
+            if (e.changedTouches.length === 0) return;
+            const touchEndX = e.changedTouches[0].clientX;
+            const touchEndY = e.changedTouches[0].clientY;
+
+            const dx = touchEndX - touchStartX;
+            const dy = touchEndY - touchStartY;
+            const absDx = Math.abs(dx);
+            const absDy = Math.abs(dy);
+            const threshold = 30;
+
+            if (absDx < threshold && absDy < threshold) return;
+
+            if (absDx > absDy) {
+                if (dx > 0) move('right');
+                else move('left');
+            } else {
+                if (dy > 0) move('down');
+                else move('up');
+            }
+        }, {
+            passive: true
+        });
+
+        restartBtn.addEventListener('click', () => {
+            setAutoPlay(false);
+            initState();
+        });
+
+        undoBtn.addEventListener('click', () => {
+            undo();
+        });
+
+        autoBtn.addEventListener('click', () => {
+            if (gameOver) return;
+            setAutoPlay(!autoPlay);
+        });
+
+        // 初始化
+        loadBestScore();
+        initState();
+    </script>
+</body>
+
+</html>
